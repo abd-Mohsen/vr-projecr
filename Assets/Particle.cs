@@ -1,8 +1,8 @@
 using UnityEngine;
 
 class Particle {
-    Matrix4x4 matrix;
-    Vector3 velocity;
+    public Matrix4x4 matrix;
+    public Vector3 velocity;
 
     public Particle(Matrix4x4 matrix, Vector3 velocity){
         this.matrix = matrix;

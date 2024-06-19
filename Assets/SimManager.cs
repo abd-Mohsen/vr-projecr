@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +35,14 @@ public class SimManager : MonoBehaviour
     void Update()
     {
         if(particles.Count < limit) SpawnNewParticle();
-        Graphics.DrawMeshInstanced(mesh, 0, material, particles.Select(p => p.Matrix).ToList());
+        // TODO: test if this below is working
+        for (int i = 0; i < particles.Count; i += batchSize)
+        {
+            int count = Math.Min(batchSize, particles.Count - i);
+            Graphics.DrawMeshInstanced(mesh, 0, material, particles.Select(p => p.Matrix).ToList().GetRange(i, count));
+        }
+        // TODO: mapping particle to its matrix might be cpu intensive 
+        //Graphics.DrawMeshInstanced(mesh, 0, material, particles.Select(p => p.Matrix).ToList());
         UpdateParticlesPosition();
         UpdateBVH();
         CheckCollisions();
@@ -49,6 +57,8 @@ public class SimManager : MonoBehaviour
                 Quaternion.identity,
                 particleSize
             );
+            particles[i].velocity.y = Math.Max(0f, particles[i].Velocity.y - 1.5f);
+            particles[i].velocity.z = Math.Max(0f, particles[i].Velocity.z - 1.5f);
         }
     }
 
@@ -96,7 +106,7 @@ public class SimManager : MonoBehaviour
                     Debug.Log($"particle is colliding with other particle");
                 }
             }
-            //CheckCollisionWithSphere(particle);
+            CheckCollisionWithSphere(particle);
         }
     }
 
@@ -143,8 +153,11 @@ public class SimManager : MonoBehaviour
     }
 
     void CollideWithBody(Vector3 collisionNormal, Particle particle){
-        particle.Velocity = Quaternion.Euler(0, 180, 0) * collisionNormal;
-        particle.Velocity *= 0.9f;
+        // TODO there is multiple cases, rotate normal according to its position (find a way to rotate on the normal's y axis)
+        // TODO make collision with a plane instead of a sphere
+        particle.Velocity = Quaternion.Euler(0, 90, 0) * collisionNormal;
+        // particle.Velocity *= 0.9f;
+        //particle.Velocity = collisionNormal;
     }
     
 }
