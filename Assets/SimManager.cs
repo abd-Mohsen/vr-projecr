@@ -157,8 +157,8 @@ public class SimManager : MonoBehaviour
         // TODO make collision with a plane instead of a sphere
         // TODO dont process all particles, just those near the car
         // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
+        if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
         particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
-        // not working when y = 0
 
         //particle.Velocity = Quaternion.Euler(0, 0, 90) * collisionNormal;
         //particle.Velocity = collisionNormal; 
