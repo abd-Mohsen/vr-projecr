@@ -359,7 +359,7 @@ MonoBehaviour:
   limit: 10000
   particleSize: {x: 0.1, y: 0.1, z: 0.1}
   voxelSize: 0.5
-  sphereCenter: {x: 6, y: 0.2, z: -0.3}
+  sphereCenter: {x: 6, y: 0.01, z: 0}
   sphereRadius: 0.5
 --- !u!1 &1628482921
 GameObject:

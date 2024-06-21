@@ -57,8 +57,8 @@ public class SimManager : MonoBehaviour
                 Quaternion.identity,
                 particleSize
             );
-            particles[i].velocity.y = Math.Max(0f, particles[i].Velocity.y - 1.5f);
-            particles[i].velocity.z = Math.Max(0f, particles[i].Velocity.z - 1.5f);
+            particles[i].velocity.y = Math.Max(0f, particles[i].Velocity.y - 1.0f);
+            particles[i].velocity.z = Math.Max(0f, particles[i].Velocity.z - 1.0f);
         }
     }
 
@@ -155,9 +155,31 @@ public class SimManager : MonoBehaviour
     void CollideWithBody(Vector3 collisionNormal, Particle particle){
         // TODO there is multiple cases, rotate normal according to its position (find a way to rotate on the normal's y axis)
         // TODO make collision with a plane instead of a sphere
-        particle.Velocity = Quaternion.Euler(0, 90, 0) * collisionNormal;
-        // particle.Velocity *= 0.9f;
-        //particle.Velocity = collisionNormal;
+        // TODO dont process all particles, just those near the car
+        // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
+        particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
+        // not working when y = 0
+
+        //particle.Velocity = Quaternion.Euler(0, 0, 90) * collisionNormal;
+        //particle.Velocity = collisionNormal; 
+        
+        // Vector3 localY = collisionNormal; // The normal of the plane is the local Y-axis
+        
+        // // Define a local X-axis (perpendicular to the normal)
+        // Vector3 arbitrary = Vector3.up; // Any arbitrary vector not parallel to the normal
+        // Vector3 localX = Vector3.Cross(localY, arbitrary).normalized;
+        
+        // // Define a local Z-axis (perpendicular to both localY and localX)
+        // Vector3 localZ = Vector3.Cross(localX, localY).normalized;
+
+        // // Create a rotation matrix for 90 degrees around the local Y-axis
+        // Quaternion rotation = Quaternion.Euler(0, -90, 0);
+
+        // // Rotate the normal vector around the local Y-axis
+        // Vector3 rotatedNormal = rotation * localZ;
+
+        // // Set the particle velocity to the rotated normal
+        // particle.Velocity = rotatedNormal;
     }
     
 }
