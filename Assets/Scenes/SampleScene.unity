@@ -358,9 +358,9 @@ MonoBehaviour:
   limit: 10000
   particleSize: {x: 0.1, y: 0.1, z: 0.1}
   voxelSize: 0.5
-  v1: {x: 6, y: -1, z: 1}
-  v2: {x: 7, y: -0.5, z: 0}
-  v3: {x: 5.5, y: 0, z: -1}
+  v1: {x: 6, y: 2, z: 0}
+  v2: {x: 8, y: -1, z: 2}
+  v3: {x: 8, y: -1, z: -2}
 --- !u!1 &2020082253
 GameObject:
   m_ObjectHideFlags: 0
@@ -391,9 +391,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: 175f9336f2b32fc4ba08848cc3958c4e, type: 2}
-  vertex1: {x: 6, y: -1, z: 1}
-  vertex2: {x: 7, y: 0.5, z: 0}
-  vertex3: {x: 5.5, y: 0, z: -1}
+  vertex1: {x: 6, y: 2, z: 0}
+  vertex2: {x: 8, y: -1, z: 2}
+  vertex3: {x: 8, y: -1, z: -2}
 --- !u!4 &2020082255
 Transform:
   m_ObjectHideFlags: 0

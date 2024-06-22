@@ -4,6 +4,7 @@ using System.Linq;
 using System;
 using UnityEngine;
 using UnityEditor;
+using Unity.VisualScripting;
 
 public class SimManager : MonoBehaviour
 {
@@ -51,6 +52,7 @@ public class SimManager : MonoBehaviour
         UpdateParticlesPosition();
         UpdateBVH();
         CheckCollisions();
+        //if(particles.Count > 1000) particles.RemoveAt(0);
     }
 
     void UpdateParticlesPosition(){
@@ -62,15 +64,15 @@ public class SimManager : MonoBehaviour
                 Quaternion.identity,
                 particleSize
             );
-            particles[i].velocity.y = Math.Max(0f, particles[i].Velocity.y - 1.0f);
-            particles[i].velocity.z = Math.Max(0f, particles[i].Velocity.z - 1.0f);
+            // particles[i].velocity.y = Math.Max(0f, particles[i].Velocity.y - 1.0f);
+            // particles[i].velocity.z = Math.Max(0f, particles[i].Velocity.z - 1.0f);
         }
     }
 
     void SpawnNewParticle(){
         Vector3 pos = new(0,0,0);
         Matrix4x4 matrix = Matrix4x4.TRS(pos:pos, Quaternion.Euler(0,0,0), particleSize);
-        particles.Add(new(matrix, new(1,0,0)));
+        particles.Add(new(matrix, new(0.3f,0,0f)));
     }
 
     public void InitializeBVH(){
@@ -82,7 +84,7 @@ public class SimManager : MonoBehaviour
     public void UpdateBVH(){
         bvh.Clear();
         foreach (Particle particle in particles){
-            AddParticleToHash(particle);
+            if(!particle.IsFar()) AddParticleToHash(particle);
         }
     }
 
@@ -103,6 +105,7 @@ public class SimManager : MonoBehaviour
 
     public void CheckCollisions(){
         foreach (Particle particle in particles){
+            if(particle.IsFar()) continue;
             List<Particle> inVoxel = bvh[GetVoxelCoordinate(particle.Matrix.GetPosition())]; // in the same voxel
             List<Particle> nearby = GetNearbyParticles(GetVoxelCoordinate(particle.Matrix.GetPosition()));
             
@@ -116,52 +119,56 @@ public class SimManager : MonoBehaviour
     }
 
     //TODO optimize later by only checking particles in voxels that include the sphere
-    // void CheckCollisionWithSphere(Particle particle){
-    //     Vector3 toParticle = particle.Matrix.GetPosition() - sphereCenter;
-    //     float distance = toParticle.magnitude;
-    //     float particleRadius = particleSize.x / 2;
+    void CheckCollisionWithSphere(Particle particle){
+        // Vector3 toParticle = particle.Matrix.GetPosition() - sphereCenter;
+        // float distance = toParticle.magnitude;
+        // float particleRadius = particleSize.x / 2;
 
-    //     if (distance <= sphereRadius + particleRadius)
-    //     {
-    //         Vector3 collisionNormal = toParticle.normalized;
-    //         // move particle outside sphere
-    //         particle.Matrix = Matrix4x4.TRS(
-    //             sphereCenter + collisionNormal * (sphereRadius + particleRadius),
-    //             Quaternion.identity,
-    //             particleSize
-    //         );
-    //         CollideWithBody(collisionNormal, particle);
-    //     }
-    // }
-
-    void CheckCollisionWithTriangle(Particle particle, List<Vector3> points)
-    {
-        Vector3 a = points[0], b = points[1], c = points[2];
-        // Compute vectors
-        Vector3 v0 = c - a;
-        Vector3 v1 = b - a;
-        Vector3 v2 = particle.matrix.GetPosition() - a;
-
-        // Compute normal
-        Vector3 normal = Vector3.Cross(v1, v0).normalized;
-
-        // Compute dot products
-        float dot00 = Vector3.Dot(v0, v0);
-        float dot01 = Vector3.Dot(v0, v1);
-        float dot02 = Vector3.Dot(v0, v2);
-        float dot11 = Vector3.Dot(v1, v1);
-        float dot12 = Vector3.Dot(v1, v2);
-
-        // Compute barycentric coordinates
-        float invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
-        float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
-        float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
-
-        // Check if point is in triangle
-        if( (u >= 0) && (v >= 0) && (u + v < 1) ){
-            CollideWithBody(normal, particle);
-        }
+        // if (distance <= sphereRadius + particleRadius)
+        // {
+        //     Vector3 collisionNormal = toParticle.normalized;
+        //     // move particle outside sphere
+        //     particle.Matrix = Matrix4x4.TRS(
+        //         sphereCenter + collisionNormal * (sphereRadius + particleRadius),
+        //         Quaternion.identity,
+        //         particleSize
+        //     );
+        //     CollideWithBody(collisionNormal, particle);
+        // }
     }
+
+void CheckCollisionWithTriangle(Particle particle, List<Vector3> triangle)
+{
+    Vector3 a = triangle[0], b = triangle[1], c = triangle[2];
+    Vector3 p = particle.matrix.GetPosition();
+
+    Vector3 pa = a - p;
+    Vector3 pb = b - p;
+    Vector3 pc = c - p;
+
+    Vector3 ca = a - c;
+    Vector3 cb = b - c;
+
+    Vector3 n1 = Vector3.Cross(pa, pb).normalized;
+    Vector3 n2 = Vector3.Cross(pc, pa).normalized;
+    Vector3 n3 = Vector3.Cross(pb, pc).normalized;
+
+    
+    Vector3 normal = Vector3.Cross(ca, cb).normalized;
+
+    Debug.Log($"n1:{n1}");
+    Debug.Log($"n2:{n2}");
+    Debug.Log($"n3:{n3}");
+
+    bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
+    //AreClose(n1,n2,n3,0.1f)
+    if (isCollided)
+    {
+        // Handle collision with the triangle
+        CollideWithBody(normal, particle);
+    }
+}
+
 
     List<Particle> GetNearbyParticles(Vector3Int voxel){
         List<Particle> nearbyParticles = new();
@@ -193,34 +200,32 @@ public class SimManager : MonoBehaviour
         // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
         // if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
         // particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
-        particle.Velocity = new(-1,0,0);
+        //if(collisionNormal.x < 0) collisionNormal.x = Math.Abs(collisionNormal.x);
+        //Debug.Log($"{collisionNormal}");
+        //collisionNormal = -collisionNormal.normalized;
+        if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
+        //particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
+        particle.Velocity = new(0,0,1);
+
         /* TODO
-        why stuck when going upwards
+        why stuck when going upwards (its from gpu,)
         normal is wrong
         not touching the triangle(small gap)
         test another triangle coordinates
         */
 
-        //particle.Velocity = Quaternion.Euler(0, 0, 90) * collisionNormal;
-        //particle.Velocity = collisionNormal; 
-        
-        // Vector3 localY = collisionNormal; // The normal of the plane is the local Y-axis
-        
-        // // Define a local X-axis (perpendicular to the normal)
-        // Vector3 arbitrary = Vector3.up; // Any arbitrary vector not parallel to the normal
-        // Vector3 localX = Vector3.Cross(localY, arbitrary).normalized;
-        
-        // // Define a local Z-axis (perpendicular to both localY and localX)
-        // Vector3 localZ = Vector3.Cross(localX, localY).normalized;
+    }
 
-        // // Create a rotation matrix for 90 degrees around the local Y-axis
-        // Quaternion rotation = Quaternion.Euler(0, -90, 0);
+    bool AreClose(Vector3 vec1, Vector3 vec2, Vector3 vec3, float threshold)
+    {
+        // Compare x, y, z components of each vector with the threshold
+        bool xClose = Mathf.Abs(vec1.x - vec2.x) < threshold && Mathf.Abs(vec1.x - vec3.x) < threshold && Mathf.Abs(vec2.x - vec3.x) < threshold;
+        bool yClose = Mathf.Abs(vec1.y - vec2.y) < threshold && Mathf.Abs(vec1.y - vec3.y) < threshold && Mathf.Abs(vec2.y - vec3.y) < threshold;
+        bool zClose = Mathf.Abs(vec1.z - vec2.z) < threshold && Mathf.Abs(vec1.z - vec3.z) < threshold && Mathf.Abs(vec2.z - vec3.z) < threshold;
 
-        // // Rotate the normal vector around the local Y-axis
-        // Vector3 rotatedNormal = rotation * localZ;
-
-        // // Set the particle velocity to the rotated normal
-        // particle.Velocity = rotatedNormal;
+        // Return true if all components are close within the threshold
+        return xClose && yClose && zClose;
     }
     
 }
+

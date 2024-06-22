@@ -21,4 +21,9 @@ class Particle {
         set { velocity = value; }
     }
 
+    public bool IsFar(){
+        Vector3 CarCentre = new(5,0,0);
+        return (matrix.GetPosition() - CarCentre).magnitude > 15;
+    }
+
 }
