@@ -20,6 +20,7 @@ public class SimManager : MonoBehaviour
     [SerializeField] Vector3 v2;
     [SerializeField] Vector3 v3;
     const int batchSize = 1023;
+    float particleRadius;
 
     List<Particle> particles = new(); // TODO: make it 2d to deal with more batches
     List<List<Vector3>> triangles = new(); // TODO
@@ -29,13 +30,10 @@ public class SimManager : MonoBehaviour
 
     void Start()
     {
-        // Vector3 pos = new(0,0,0);
-        // Matrix4x4 matrix = Matrix4x4.TRS(pos:pos, Quaternion.Euler(0,0,0), particleSize);
-        // particles.Add(new(matrix, new(1,0,0)));
         triangles.Add(new List<Vector3>{v1,v2,v3});
-        InitializeBVH();
-        // body.transform.position = sphereCenter;
-        // body.transform.localScale = new(2*sphereRadius, 2*sphereRadius, 2*sphereRadius);
+        particleRadius = particleSize.x/2;
+        //TODO create a second bvh for triangles and populate it here
+        //InitializeBVH();
     }
 
     void Update()
@@ -72,7 +70,7 @@ public class SimManager : MonoBehaviour
     void SpawnNewParticle(){
         Vector3 pos = new(0,0,0);
         Matrix4x4 matrix = Matrix4x4.TRS(pos:pos, Quaternion.Euler(0,0,0), particleSize);
-        particles.Add(new(matrix, new(0.3f,0,0f)));
+        particles.Add(new(matrix, new(1.0f,0,0f)));
     }
 
     public void InitializeBVH(){
@@ -149,22 +147,21 @@ void CheckCollisionWithTriangle(Particle particle, List<Vector3> triangle)
     Vector3 ca = a - c;
     Vector3 cb = b - c;
 
-    Vector3 n1 = Vector3.Cross(pa, pb).normalized;
-    Vector3 n2 = Vector3.Cross(pc, pa).normalized;
-    Vector3 n3 = Vector3.Cross(pb, pc).normalized;
+    Vector3 n1 = Vector3.Cross(pb, pa).normalized;
+    Vector3 n2 = Vector3.Cross(pa, pc).normalized;
+    Vector3 n3 = Vector3.Cross(pc, pb).normalized;
 
     
-    Vector3 normal = Vector3.Cross(ca, cb).normalized;
+    Vector3 normal = Vector3.Cross(cb, ca).normalized;
 
     Debug.Log($"n1:{n1}");
     Debug.Log($"n2:{n2}");
     Debug.Log($"n3:{n3}");
 
-    bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
-    //AreClose(n1,n2,n3,0.1f)
+    //bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
+    bool isCollided = AreClose(n1,n2,n3,0.2f);
     if (isCollided)
     {
-        // Handle collision with the triangle
         CollideWithBody(normal, particle);
     }
 }
@@ -203,9 +200,16 @@ void CheckCollisionWithTriangle(Particle particle, List<Vector3> triangle)
         //if(collisionNormal.x < 0) collisionNormal.x = Math.Abs(collisionNormal.x);
         //Debug.Log($"{collisionNormal}");
         //collisionNormal = -collisionNormal.normalized;
+        Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
+        Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
+        particle.Matrix = Matrix4x4.TRS(
+                newPosition,
+                Quaternion.identity,
+                particleSize
+        );
         if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
-        //particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
-        particle.Velocity = new(0,0,1);
+        particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
+        //particle.Velocity = collisionNormal;
 
         /* TODO
         why stuck when going upwards (its from gpu,)
