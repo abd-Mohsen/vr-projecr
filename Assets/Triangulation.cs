@@ -1,57 +1,24 @@
-using System;
 using UnityEngine;
 using System.Collections.Generic;
 using MIConvexHull;
 using System.Linq;
-using System.Globalization;
-using System.IO;
 
 
-class Triangulation : MonoBehaviour{
+class Triangulation{
 
-    List<Vector3> localVertices = new();
-    List<Vector3> worldVertices = new();
+    //List<Vector3> localVertices = new();
+    List<Vector3> worldVertices;
     public List<Triangle> triangles = new();
 
-    string modelPath;
+    //string modelPath;
 
-    public Triangulation(string modelPath){
-        this.modelPath = modelPath;
-        GetVertices();
-        ConvertToWorldCoordinates();
+    public Triangulation(List<Vector3> worldVertices){
+        //this.modelPath = modelPath;
+        this.worldVertices = worldVertices;
         Delaunay();
     }
 
-    //implement vertex extraction here
-    public void GetVertices(){
-        //string path = "C:/Users/ABD/Desktop/car.obj";
-
-        foreach (string line in File.ReadLines(modelPath))
-        {
-            if (line.StartsWith("v "))
-            {
-                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length == 4)
-                {
-                    float x = float.Parse(parts[1], CultureInfo.InvariantCulture);
-                    float y = float.Parse(parts[2], CultureInfo.InvariantCulture);
-                    float z = float.Parse(parts[3], CultureInfo.InvariantCulture);
-
-                    localVertices.Add(new Vector3(x, y, z));
-                }
-            }
-        }
-    }
     
-    public void ConvertToWorldCoordinates()
-    {
-        foreach (Vector3 vertex in localVertices)
-        {
-            Vector3 worldVertex = transform.TransformPoint(vertex);
-            worldVertices.Add(worldVertex);
-        }
-    }
-
     public List<Triangle> Delaunay()
     {
         List<Vertex> vertices = worldVertices.Select(v => new Vertex(v.x, v.y, v.z)).ToList();

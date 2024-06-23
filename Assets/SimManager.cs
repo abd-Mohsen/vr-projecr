@@ -4,8 +4,8 @@ using System.Linq;
 using System;
 using UnityEngine;
 using UnityEditor;
-using UnityEngine.Experimental.AI;
-using Unity.VisualScripting;
+using System.Globalization;
+using System.IO;
 
 public class SimManager : MonoBehaviour
 {
@@ -29,8 +29,21 @@ public class SimManager : MonoBehaviour
     [SerializeField] string modelPath;
     
     void Awake(){
-        Triangulation triangulation = new(modelPath);
+        List<Vector3> localVertices = GetVertices(modelPath);
+        List<Vector3> wordVerticies = ConvertToWorldCoordinates(localVertices);
+        Triangulation triangulation = new(wordVerticies);
         triangles = triangulation.Delaunay();
+    }
+
+    public List<Vector3> ConvertToWorldCoordinates(List<Vector3> localVertices)
+    {
+        List<Vector3> worldVertices = new();
+        foreach (Vector3 vertex in localVertices)
+        {
+            Vector3 worldVertex = transform.TransformPoint(vertex);
+            worldVertices.Add(worldVertex);
+        }
+        return worldVertices;
     }
 
     void Start()
@@ -248,6 +261,29 @@ public class SimManager : MonoBehaviour
         // Return true if all components are close within the threshold
         return xClose && yClose && zClose;
     }
+
     
+     public List<Vector3> GetVertices(string modelPath){
+        //string path = "C:/Users/ABD/Desktop/car.obj";
+        List<Vector3> localVertices = new();
+        foreach (string line in File.ReadLines(modelPath))
+        {
+            if (line.StartsWith("v "))
+            {
+                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 4)
+                {
+                    float x = float.Parse(parts[1], CultureInfo.InvariantCulture);
+                    float y = float.Parse(parts[2], CultureInfo.InvariantCulture);
+                    float z = float.Parse(parts[3], CultureInfo.InvariantCulture);
+
+                    localVertices.Add(new Vector3(x, y, z));
+                }
+            }
+        }
+        return localVertices;
+    }
+    
+
 }
 
