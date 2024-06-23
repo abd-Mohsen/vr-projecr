@@ -4,6 +4,8 @@ using System.Linq;
 using System;
 using UnityEngine;
 using UnityEditor;
+using UnityEngine.Experimental.AI;
+using Unity.VisualScripting;
 
 public class SimManager : MonoBehaviour
 {
@@ -19,15 +21,21 @@ public class SimManager : MonoBehaviour
     const int batchSize = 1023;
     float particleRadius;
 
-    List<Particle> particles = new(); // TODO: make it 2d to deal with more batches
-    List<List<Vector3>> triangles = new(); // TODO
+    List<Particle> particles = new();
+    List<Triangle> triangles = new(); // TODO
 
     Dictionary<Vector3Int, List<Particle>> bvh = new();
+
+    [SerializeField] string modelPath;
     
+    void Awake(){
+        Triangulation triangulation = new(modelPath);
+        triangles = triangulation.Delaunay();
+    }
 
     void Start()
     {
-        triangles.Add(new List<Vector3>{v1,v2,v3});
+        triangles.Add(new Triangle(v1,v2,v3));
         particleRadius = particleSize.x/2;
         //TODO create a second bvh for triangles and populate it here
         //InitializeBVH();
@@ -48,7 +56,7 @@ public class SimManager : MonoBehaviour
                 //castShadows: UnityEngine.Rendering.ShadowCastingMode.Off
                 );
         }
-        // TODO: mapping particle to its matrix might be cpu intensive 
+        // TODO: mapping particle to its matrix might be cpu intensive (for loop might be faster)
         UpdateParticlesPosition();
         UpdateBVH();
         CheckCollisions();
@@ -123,9 +131,9 @@ public class SimManager : MonoBehaviour
     }
 
     //TODO optimize later by only checking particles in voxels that include the triangle, and multithread
-    void CheckCollisionWithTriangle(Particle particle, List<Vector3> triangle)
+    void CheckCollisionWithTriangle(Particle particle, Triangle triangle)
     {
-        Vector3 a = triangle[0], b = triangle[1], c = triangle[2];
+        Vector3 a = triangle.A, b = triangle.B, c = triangle.C;
         Vector3 p = particle.matrix.GetPosition();
 
         Vector3 pa = a - p;
@@ -144,7 +152,7 @@ public class SimManager : MonoBehaviour
 
         // Debug.Log($"n1:{n1}");
         // Debug.Log($"n2:{n2}");
-        //Debug.Log($"n3:{n3}"); // TODO removing this causes errors
+        Debug.Log($"n3:{n3}"); // TODO removing this causes errors
 
         //bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
         bool isCollided = AreClose(n1,n2,n3,0.2f);
@@ -192,7 +200,7 @@ public class SimManager : MonoBehaviour
         particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
         //particle.Velocity = collisionNormal;
 
-        /* TODO
+        /*
         why stuck when going upwards (its from gpu,)
         */
 
@@ -213,22 +221,25 @@ public class SimManager : MonoBehaviour
         
         // Push each particle away by half the overlap
         p1.Matrix = Matrix4x4.TRS(
-            position1 + direction * (overlap / 2),
+            position1 + (overlap / 2 * direction),
             Quaternion.identity,
             particleSize
         );
 
         p2.Matrix = Matrix4x4.TRS(
-            position1 - direction * (overlap / 2),
+            position1 - (overlap / 2 * direction),
             Quaternion.identity,
             particleSize
         );
+        p1.velocity = 0.9f * p1.velocity;
+        p1.velocity = 0.9f * p2.velocity;
         return (p1,p2);
         //try to store transitions and then loopover
     }
 
     bool AreClose(Vector3 vec1, Vector3 vec2, Vector3 vec3, float threshold)
     {
+        //TODO check if i can replace this with smth more efficient
         // Compare x, y, z components of each vector with the threshold
         bool xClose = Mathf.Abs(vec1.x - vec2.x) < threshold && Mathf.Abs(vec1.x - vec3.x) < threshold && Mathf.Abs(vec2.x - vec3.x) < threshold;
         bool yClose = Mathf.Abs(vec1.y - vec2.y) < threshold && Mathf.Abs(vec1.y - vec3.y) < threshold && Mathf.Abs(vec2.y - vec3.y) < threshold;
