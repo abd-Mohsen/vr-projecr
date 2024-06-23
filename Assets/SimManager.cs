@@ -76,13 +76,7 @@ public class SimManager : MonoBehaviour
     void SpawnNewParticle(){
         Vector3 pos = new(0,0,0);
         Matrix4x4 matrix = Matrix4x4.TRS(pos:pos, Quaternion.Euler(0,0,0), particleSize);
-        particles.Add(new(matrix, new(0.1f,0f,0f)));
-    }
-
-    public void InitializeBVH(){
-        foreach (Particle particle in particles){
-            AddParticleToHash(particle);
-        }
+        particles.Add(new(matrix, new(0.5f,0f,0f)));
     }
 
     public void UpdateBVH(){
@@ -128,25 +122,7 @@ public class SimManager : MonoBehaviour
         }
     }
 
-    //TODO optimize later by only checking particles in voxels that include the sphere, and multithread
-    void CheckCollisionWithSphere(Particle particle){
-        // Vector3 toParticle = particle.Matrix.GetPosition() - sphereCenter;
-        // float distance = toParticle.magnitude;
-        // float particleRadius = particleSize.x / 2;
-
-        // if (distance <= sphereRadius + particleRadius)
-        // {
-        //     Vector3 collisionNormal = toParticle.normalized;
-        //     // move particle outside sphere
-        //     particle.Matrix = Matrix4x4.TRS(
-        //         sphereCenter + collisionNormal * (sphereRadius + particleRadius),
-        //         Quaternion.identity,
-        //         particleSize
-        //     );
-        //     CollideWithBody(collisionNormal, particle);
-        // }
-    }
-
+    //TODO optimize later by only checking particles in voxels that include the triangle, and multithread
     void CheckCollisionWithTriangle(Particle particle, List<Vector3> triangle)
     {
         Vector3 a = triangle[0], b = triangle[1], c = triangle[2];
@@ -178,7 +154,6 @@ public class SimManager : MonoBehaviour
         }
     }
 
-
     List<Particle> GetNearbyParticles(Vector3Int voxel){
         List<Particle> nearbyParticles = new();
 
@@ -206,11 +181,6 @@ public class SimManager : MonoBehaviour
         // TODO dont process all particles, just those near the car
         // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
 
-        // if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
-        // particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
-        //if(collisionNormal.x < 0) collisionNormal.x = Math.Abs(collisionNormal.x);
-        //Debug.Log($"{collisionNormal}");
-        //collisionNormal = -collisionNormal.normalized;
         Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
         Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
         particle.Matrix = Matrix4x4.TRS(
@@ -256,7 +226,6 @@ public class SimManager : MonoBehaviour
         return (p1,p2);
         //try to store transitions and then loopover
     }
-
 
     bool AreClose(Vector3 vec1, Vector3 vec2, Vector3 vec3, float threshold)
     {
