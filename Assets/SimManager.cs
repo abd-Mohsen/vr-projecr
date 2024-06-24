@@ -12,14 +12,14 @@ public class SimManager : MonoBehaviour
     [SerializeField] Mesh mesh;
     [SerializeField] Material material;
     [SerializeField] int limit;
-    [SerializeField] Vector3 particleSize;
+    Vector3 particleSize;
     [SerializeField] float voxelSize = 1f;
     [SerializeField] Vector3 v1;
     [SerializeField] Vector3 v2;
     [SerializeField] Vector3 v3;
     [SerializeField] GameObject carBody;
     const int batchSize = 1023;
-    float particleRadius;
+    [SerializeField] float particleRadius;
 
     List<Particle> particles = new();
     List<Triangle> triangles = new();
@@ -44,6 +44,7 @@ public class SimManager : MonoBehaviour
         Debug.Log($"finished triangulation {triangles.Count}");
         InitBVH2();
         Debug.Log($"initialized bvh2");
+        particleSize = new(2*particleRadius, 2*particleRadius, 2*particleRadius);
     }
 
     public void InitBVH2(){
@@ -147,9 +148,9 @@ public class SimManager : MonoBehaviour
                 );
         }
         // TODO: mapping particle to its matrix might be cpu intensive (for loop might be faster)
-        //UpdateParticlesPosition();
-        //UpdateBVH();
-        //CheckCollisions();
+        // UpdateParticlesPosition();
+        // UpdateBVH();
+        // CheckCollisions();
         //if(particles.Count > 1000) particles.RemoveAt(0);
     }
 
@@ -171,7 +172,7 @@ public class SimManager : MonoBehaviour
     }
 
     void VisualizeCar(){
-        for(int i=0; i<worldVertices.Count; i+=500){
+        for(int i=0; i<worldVertices.Count; i+=1){
             Vector3 vertex = worldVertices[i];
             Debug.Log(vertex);
             Matrix4x4 matrix = Matrix4x4.TRS(pos:vertex, Quaternion.Euler(0,0,0), particleSize);
