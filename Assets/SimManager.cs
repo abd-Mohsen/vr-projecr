@@ -11,28 +11,55 @@ public class SimManager : MonoBehaviour
 {
     [SerializeField] Mesh mesh;
     [SerializeField] Material material;
-    //[SerializeField] GameObject body;
     [SerializeField] int limit;
     [SerializeField] Vector3 particleSize;
     [SerializeField] float voxelSize = 1f;
     [SerializeField] Vector3 v1;
     [SerializeField] Vector3 v2;
     [SerializeField] Vector3 v3;
+    [SerializeField] GameObject carBody;
     const int batchSize = 1023;
     float particleRadius;
 
     List<Particle> particles = new();
-    List<Triangle> triangles = new(); // TODO
+    List<Triangle> triangles = new();
 
     Dictionary<Vector3Int, List<Particle>> bvh = new();
+    Dictionary<Vector3Int, List<Triangle>> bvh2 = new();
+
+    List<Vector3> worldVertices = new();
 
     [SerializeField] string modelPath;
+
+    private readonly uint[] _args = { 0, 0, 0, 0, 0 };
+    private ComputeBuffer _argsBuffer;
     
     void Awake(){
-        List<Vector3> localVertices = GetVertices(modelPath);
-        List<Vector3> wordVerticies = ConvertToWorldCoordinates(localVertices);
-        Triangulation triangulation = new(wordVerticies);
+        //List<Vector3> localVertices = GetLocalVertices();
+        GetVerticesFromMesh1(modelPath);
+        Debug.Log($"extracted points {worldVertices.Count}");
+        Debug.Log($"some point: {worldVertices[1]}");
+        Triangulation triangulation = new(worldVertices);
         triangles = triangulation.Delaunay();
+        Debug.Log($"finished triangulation {triangles.Count}");
+        InitBVH2();
+        Debug.Log($"initialized bvh2");
+    }
+
+    public void InitBVH2(){
+        foreach(Triangle triangle in triangles){
+            AddParticleToHash2(triangle, triangle.A);
+            AddParticleToHash2(triangle, triangle.B);
+            AddParticleToHash2(triangle, triangle.C);
+        }
+    }
+
+    void AddParticleToHash2(Triangle triangle, Vector3 point){
+        Vector3Int voxel = GetVoxelCoordinate(point);
+        if (!bvh2.ContainsKey(voxel)){
+            bvh2[voxel] = new List<Triangle>();
+        }
+        bvh2[voxel].Add(triangle);
     }
 
     public List<Vector3> ConvertToWorldCoordinates(List<Vector3> localVertices)
@@ -40,23 +67,73 @@ public class SimManager : MonoBehaviour
         List<Vector3> worldVertices = new();
         foreach (Vector3 vertex in localVertices)
         {
-            Vector3 worldVertex = transform.TransformPoint(vertex);
+            Vector3 worldVertex = carBody.transform.TransformPoint(vertex);
             worldVertices.Add(worldVertex);
         }
         return worldVertices;
     }
 
+    // private void UpdateBuffers()
+    // {
+    //     // Positions
+    //     _positionBuffer1?.Release();
+    //     _positionBuffer2?.Release();
+    //     _positionBuffer1 = new ComputeBuffer(_count, 16);
+    //     _positionBuffer2 = new ComputeBuffer(_count, 16);
+
+    //     var positions1 = new Vector4[_count];
+    //     var positions2 = new Vector4[_count];
+
+    //     // Grouping cubes into a bunch of spheres
+    //     var offset = Vector3.zero;
+    //     var batchIndex = 0;
+    //     var batch = 0;
+    //     for (var i = 0; i < _count; i++)
+    //     {
+    //         var dir = Random.insideUnitSphere.normalized;
+    //         positions1[i] = dir * Random.Range(10, 15) + offset;
+    //         positions2[i] = dir * Random.Range(30, 50) + offset;
+
+    //         positions1[i].w = Random.Range(-3f, 3f);
+    //         positions2[i].w = batch;
+
+    //         if (batchIndex++ == 250000)
+    //         {
+    //             batchIndex = 0;
+    //             batch++;
+    //             offset += new Vector3(90, 0, 0);
+    //         }
+    //     }
+
+    //     _positionBuffer1.SetData(positions1);
+    //     _positionBuffer2.SetData(positions2);
+    //     _instanceMaterial.SetBuffer("position_buffer_1", _positionBuffer1);
+    //     _instanceMaterial.SetBuffer("position_buffer_2", _positionBuffer2);
+    //     _instanceMaterial.SetColorArray("color_buffer", SceneTools.Instance.ColorArray);
+
+    //     // Verts
+    //     _args[0] = _instanceMesh.GetIndexCount(0);
+    //     _args[1] = (uint)_count;
+    //     _args[2] = _instanceMesh.GetIndexStart(0);
+    //     _args[3] = _instanceMesh.GetBaseVertex(0);
+
+    //     _argsBuffer.SetData(_args);
+    // }
+
     void Start()
     {
         triangles.Add(new Triangle(v1,v2,v3));
         particleRadius = particleSize.x/2;
-        //TODO create a second bvh for triangles and populate it here
-        //InitializeBVH();
+        // _argsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
+        // UpdateBuffers();
     }
 
     void Update()
     {
-        if(particles.Count < limit) SpawnNewParticle();
+        if(particles.Count < limit) {
+            //SpawnNewParticle(new(-21f,0.2f,1.5f));
+        }
+        VisualizeCar();
         // TODO: test if this below is working
         for (int i = 0; i < particles.Count; i += batchSize)
         {
@@ -70,9 +147,9 @@ public class SimManager : MonoBehaviour
                 );
         }
         // TODO: mapping particle to its matrix might be cpu intensive (for loop might be faster)
-        UpdateParticlesPosition();
-        UpdateBVH();
-        CheckCollisions();
+        //UpdateParticlesPosition();
+        //UpdateBVH();
+        //CheckCollisions();
         //if(particles.Count > 1000) particles.RemoveAt(0);
     }
 
@@ -85,19 +162,22 @@ public class SimManager : MonoBehaviour
                 Quaternion.identity,
                 particleSize
             );
-            //TODO: why set matrix is not working
-            // particles[i].Matrix.SetTRS(oldPos + 10 * Time.deltaTime * particles[i].Velocity,
-            //     Quaternion.identity,
-            //     particleSize);
-            // particles[i].velocity.y = Math.Max(0f, particles[i].Velocity.y - 1.0f);
-            // particles[i].velocity.z = Math.Max(0f, particles[i].Velocity.z - 1.0f);
         }
     }
 
-    void SpawnNewParticle(){
-        Vector3 pos = new(0,0,0);
-        Matrix4x4 matrix = Matrix4x4.TRS(pos:pos, Quaternion.Euler(0,0,0), particleSize);
+    void SpawnNewParticle(Vector3 spawnPos){
+        Matrix4x4 matrix = Matrix4x4.TRS(pos:spawnPos, Quaternion.Euler(0,0,0), particleSize);
         particles.Add(new(matrix, new(0.5f,0f,0f)));
+    }
+
+    void VisualizeCar(){
+        for(int i=0; i<worldVertices.Count; i+=500){
+            Vector3 vertex = worldVertices[i];
+            Debug.Log(vertex);
+            Matrix4x4 matrix = Matrix4x4.TRS(pos:vertex, Quaternion.Euler(0,0,0), particleSize);
+            particles.Add(new(matrix, new(0.5f,0f,0f)));
+        }
+        
     }
 
     public void UpdateBVH(){
@@ -125,25 +205,27 @@ public class SimManager : MonoBehaviour
     public void CheckCollisions(){
         foreach (Particle particle in particles){
             if(particle.IsFar()) continue;
-            List<Particle> inVoxel = bvh[GetVoxelCoordinate(particle.Matrix.GetPosition())]; // in the same voxel
-            List<Particle> nearby = GetNearbyParticles(GetVoxelCoordinate(particle.Matrix.GetPosition()));
+            Vector3 particlePos = particle.Matrix.GetPosition();
+            List<Particle> inVoxel = bvh[GetVoxelCoordinate(particlePos)]; // in the same voxel
+            List<Particle> nearby = GetNearbyParticles(GetVoxelCoordinate(particlePos));
             List<Particle> newPositions = new();
             foreach (Particle other in inVoxel.Union(nearby)){
                 if (other != particle && IsParticlesColliding(particle, other)){
-                    (Particle, Particle) collided = CollideParticles(particle, other);
-                    newPositions.Add(collided.Item1);
-                    newPositions.Add(collided.Item2);
+                    // (Particle, Particle) collided = CollideParticles(particle, other);
+                    // newPositions.Add(collided.Item1);
+                    // newPositions.Add(collided.Item2);
                 }
             }
             for(int i=0; i<newPositions.Count; i++){
                 AddParticleToHash(newPositions[i]);
             }
-            // then apply them here, to not change bvh amid
-            CheckCollisionWithTriangle(particle, triangles[0]);
+            if(!bvh2.ContainsKey(GetVoxelCoordinate(particlePos))) continue;
+            foreach(Triangle triangle in bvh2[GetVoxelCoordinate(particlePos)]){
+                CheckCollisionWithTriangle(particle, triangle);
+            }
         }
     }
 
-    //TODO optimize later by only checking particles in voxels that include the triangle, and multithread
     void CheckCollisionWithTriangle(Particle particle, Triangle triangle)
     {
         Vector3 a = triangle.A, b = triangle.B, c = triangle.C;
@@ -263,7 +345,7 @@ public class SimManager : MonoBehaviour
     }
 
     
-     public List<Vector3> GetVertices(string modelPath){
+    public void GetVerticesFromMesh1(string modelPath){
         //string path = "C:/Users/ABD/Desktop/car.obj";
         List<Vector3> localVertices = new();
         foreach (string line in File.ReadLines(modelPath))
@@ -281,7 +363,35 @@ public class SimManager : MonoBehaviour
                 }
             }
         }
-        return localVertices;
+        //worldVertices = ConvertToWorldCoordinates(localVertices);
+        worldVertices = localVertices;
+    }
+
+    private void GetVerticesFromMesh2()
+    {
+        //List<Vector3> localVertices = new();
+        MeshFilter[] meshFilters = carBody.GetComponentsInChildren<MeshFilter>();
+        //MeshFilter ogFilter = carBody.GetComponent<MeshFilter>;
+        List<Vector3> res = new();
+            foreach (MeshFilter meshFilter in meshFilters)
+            {
+                if (meshFilter != null)
+                {
+                    Mesh mesh = meshFilter.sharedMesh;
+                    Transform meshTransform = meshFilter.transform;
+
+                    // Get local vertices from the mesh
+                    Vector3[] localVertices = mesh.vertices;
+
+                    // Convert each local vertex to world coordinates
+                    foreach (Vector3 localVertex in localVertices)
+                    {
+                        Vector3 worldVertex = meshTransform.TransformPoint(localVertex);
+                        worldVertices.Add(worldVertex);
+                    }
+                }
+            }
+        Debug.Log($"{res.Count} vertex total (including submeshes)");
     }
     
 
