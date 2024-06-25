@@ -18,7 +18,7 @@ class Triangulation{
         Delaunay();
     }
 
-    
+    //TODO find a way to remove vertices outside the model
     public List<Triangle> Delaunay()
     {
         List<Vertex> vertices = worldVertices.Select(v => new Vertex(v.x, v.y, v.z)).ToList();
