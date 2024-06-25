@@ -13,9 +13,6 @@ public class SimManager : MonoBehaviour
     [SerializeField] Material material;
     [SerializeField] int limit;
     [SerializeField] float voxelSize = 1f;
-    [SerializeField] Vector3 v1;
-    [SerializeField] Vector3 v2;
-    [SerializeField] Vector3 v3;
     [SerializeField] GameObject carBody;
     [SerializeField] float particleRadius;
     [SerializeField] string modelPath;
@@ -37,15 +34,11 @@ public class SimManager : MonoBehaviour
         //List<Vector3> localVertices = GetLocalVertices();
         GetVerticesFromMesh2();
         Debug.Log($"extracted points {worldVertices.Count}");
-        Debug.Log($"some point: {worldVertices[1]}");
         Triangulation triangulation = new(worldVertices);
         triangles = triangulation.Delaunay();
         Debug.Log($"finished triangulation {triangles.Count}");
         InitBVH2();
-        Debug.Log(bvh2.Count);
-        Debug.Log($"initialized bvh2");
-        triangles.RemoveAt(triangles.Count - 1);
-        triangles.RemoveAt(triangles.Count - 1);
+        Debug.Log($"initialized bvh2{bvh2.Count}");
         //TODO get min x,y,z and max x,y,z of the body from the world vertices
         //Application.targetFrameRate = 60;
     }
@@ -71,7 +64,7 @@ public class SimManager : MonoBehaviour
         UpdateParticlesPosition();
         UpdateBVH();
         CheckCollisions();
-        //if(particles.Count > limit) particles.RemoveAt(0); // TODO
+        //if(particles.Count > limit) particles.RemoveAt(0);
         //VisualizeVertices("w");
     }
 
