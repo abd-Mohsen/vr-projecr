@@ -46,13 +46,13 @@ public class SimManager : MonoBehaviour
         Debug.Log($"initialized bvh2");
         triangles.RemoveAt(triangles.Count - 1);
         triangles.RemoveAt(triangles.Count - 1);
-        //TODO get min x and min y of the body from the world vertices
+        //TODO get min x,y,z and max x,y,z of the body from the world vertices
+        //Application.targetFrameRate = 60;
     }
 
     void Start()
     {
         particleSize = new(2*particleRadius, 2*particleRadius, 2*particleRadius);
-        triangles.Add(new Triangle(v1,v2,v3));
         particleRadius = particleSize.x/2;
         // _argsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         // UpdateBuffers();
@@ -61,15 +61,18 @@ public class SimManager : MonoBehaviour
     void Update()
     {
         if(particles.Count < limit) {
-            if(spawnedParticles % 30 == 0) SpawnNewParticle(new(-20f,0f,0f));
+            if(spawnedParticles % 40 == 0){
+                SpawnNewParticle(new(-20f, 3.5f, 2.0f)); 
+                SpawnNewParticle(new(-20f, 3.5f, -2.0f)); 
+            } 
             spawnedParticles++;
         }
         RenderParticles();
         UpdateParticlesPosition();
         UpdateBVH();
         CheckCollisions();
-        //if(particles.Count > 1000) particles.RemoveAt(0); // TODO
-        //VisualizeVertices("");
+        //if(particles.Count > limit) particles.RemoveAt(0); // TODO
+        //VisualizeVertices("w");
     }
 
     public void RenderParticles(){
@@ -109,7 +112,7 @@ public class SimManager : MonoBehaviour
 
     bool IsFar(Particle p){
         Vector3 CarCentre = carBody.transform.position;
-        return (p.matrix.GetPosition() - CarCentre).magnitude > 15;
+        return MathF.Abs((p.matrix.GetPosition() - CarCentre).magnitude) > 30;
     }
 
     void AddParticleToHash2(Triangle triangle, Vector3 point){
@@ -187,12 +190,14 @@ public class SimManager : MonoBehaviour
                 Quaternion.identity,
                 particleSize
             );
+            // particles[i].velocity.y = MathF.Max(0.0f, particles[i].velocity.y - 1.2f);
+            // particles[i].velocity.z = MathF.Max(0.0f, particles[i].velocity.z - 1.2f);
         }
     }
 
     void SpawnNewParticle(Vector3 spawnPos){
         Matrix4x4 matrix = Matrix4x4.TRS(pos:spawnPos, Quaternion.Euler(0,0,0), particleSize);
-        particles.Add(new(matrix, new(0.5f,0f,0f)));
+        particles.Add(new(matrix, new(0.2f,0f,0f)));
     }
 
     void VisualizeVertices(string type){
@@ -262,6 +267,7 @@ public class SimManager : MonoBehaviour
             }
             if(!bvh2.ContainsKey(GetVoxelCoordinate(particlePos))) continue;
             foreach(Triangle triangle in bvh2[GetVoxelCoordinate(particlePos)]){
+                Debug.Log("chk");
                 CheckCollisionWithTriangle(particle, triangle);
             }
         }
@@ -269,7 +275,6 @@ public class SimManager : MonoBehaviour
 
     void CheckCollisionWithTriangle(Particle particle, Triangle triangle)
     {
-        Debug.Log("dfasf");
         Vector3 a = triangle.A, b = triangle.B, c = triangle.C;
         Vector3 p = particle.matrix.GetPosition();
 
@@ -287,8 +292,8 @@ public class SimManager : MonoBehaviour
         
         Vector3 normal = Vector3.Cross(cb, ca).normalized;
 
-        Debug.Log($"n1:{n1}");
-        Debug.Log($"n2:{n2}");
+        // Debug.Log($"n1:{n1}");
+        // Debug.Log($"n2:{n2}");
         Debug.Log($"n3:{n3}"); // TODO removing this causes errors
 
         //bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
@@ -326,14 +331,15 @@ public class SimManager : MonoBehaviour
         // TODO dont process all particles, just those near the car
         // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
 
-        Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
-        Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
-        particle.Matrix = Matrix4x4.TRS(
-                newPosition,
-                Quaternion.identity,
-                particleSize
-        );
-        if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
+        // Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
+        // Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
+        // particle.Matrix = Matrix4x4.TRS(
+        //         newPosition,
+        //         Quaternion.identity,
+        //         particleSize
+        // );
+        //collisionNormal = 0.2f * collisionNormal;
+        //if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
         particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
         //particle.Velocity = new(0,1,0);
     }

@@ -24,7 +24,7 @@ class Triangulation{
         List<Vertex> vertices = worldVertices.Select(v => new Vertex(v.x, v.y, v.z)).ToList();
 
         // Perform the triangulation
-        var delaunayTriangulation = DelaunayTriangulation<Vertex, DefaultTriangulationCell<Vertex>>.Create(vertices, 1e-9);
+        var delaunayTriangulation = DelaunayTriangulation<Vertex, DefaultTriangulationCell<Vertex>>.Create(vertices, 1e-3);
 
         foreach (var cell in delaunayTriangulation.Cells)
         {
