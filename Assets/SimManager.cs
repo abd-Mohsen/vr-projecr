@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Globalization;
 using System.IO;
+using Unity.Jobs;
 
 public class SimManager : MonoBehaviour
 {
@@ -30,14 +31,14 @@ public class SimManager : MonoBehaviour
     // private readonly uint[] _args = { 0, 0, 0, 0, 0 };
     // private ComputeBuffer _argsBuffer;
     
+    // يتم استدعاء قبل البدء بالمحاكاة
     void Awake(){
-        //List<Vector3> localVertices = GetLocalVertices();
-        GetVerticesFromMesh2();
+        GetVerticesFromMesh2(); // تخزين النقاط
         Debug.Log($"extracted points {worldVertices.Count}");
-        Triangulation triangulation = new(worldVertices);
-        triangles = triangulation.Delaunay();
+        Triangulation triangulation = new(worldVertices); // تثليث
+        triangles = triangulation.Delaunay();// تثليث
         Debug.Log($"finished triangulation {triangles.Count}");
-        InitBVH2();
+        InitBVH2(); // تخزين المثلثات في هاش
         Debug.Log($"initialized bvh2{bvh2.Count}");
         //TODO get min x,y,z and max x,y,z of the body from the world vertices
         //Application.targetFrameRate = 60;
@@ -67,7 +68,8 @@ public class SimManager : MonoBehaviour
         RenderParticles();
         //VisualizeVertices("w");
     }
-
+    
+    // عرض الجزيئات باستخدام  gpu instancing
     public void RenderParticles(){
          // TODO: test if this below is working and optimised
         //Matrix4x4[] matrixArray = new Matrix4x4[particles.Count]; 
@@ -95,6 +97,7 @@ public class SimManager : MonoBehaviour
         }
     }
 
+    // تخزين المثلثات في هاش
     public void InitBVH2(){
         foreach(Triangle triangle in triangles){
             AddParticleToHash2(triangle, triangle.A);
@@ -103,6 +106,7 @@ public class SimManager : MonoBehaviour
         }
     }
 
+    // عدم معالجة الجزيئات البعيدة عن الجسم
     bool IsFar(Particle p){
         Vector3 CarCentre = carBody.transform.position;
         return MathF.Abs((p.matrix.GetPosition() - CarCentre).magnitude) > 20;
@@ -174,6 +178,7 @@ public class SimManager : MonoBehaviour
     //     _argsBuffer.SetData(_args);
     // }
 
+    // تحريك الجزيئات
     void UpdateParticlesPosition(){
         //TODO edit velocity when neccessary (eg: y and z)
         for (int i = 0; i < particles.Count; i++){
@@ -183,11 +188,13 @@ public class SimManager : MonoBehaviour
                 Quaternion.identity,
                 particleSize
             );
+            // مشان الجزيئات تضل لازقة بالجسم
             particles[i].velocity.y = MathF.Max(0.0f, particles[i].velocity.y - 0.2f);
             particles[i].velocity.z = MathF.Max(0.0f, particles[i].velocity.z - 0.2f);
         }
     }
 
+    // ضخ جزيئة جديدة
     void SpawnNewParticle(Vector3 spawnPos){
         Matrix4x4 matrix = Matrix4x4.TRS(pos:spawnPos, Quaternion.Euler(0,0,0), particleSize);
         particles.Add(new(matrix, new(0.2f,0f,0f)));
@@ -219,6 +226,7 @@ public class SimManager : MonoBehaviour
         }
     }
 
+    // تحديث الهاش 
     public void UpdateBVH(){
         bvh.Clear();
         foreach (Particle particle in particles){
@@ -241,15 +249,18 @@ public class SimManager : MonoBehaviour
         return new Vector3Int(x, y, z);
     }
 
+    // كلشي متعلق الصدم
     public void CheckCollisions(){
         foreach (Particle particle in particles){
-            if(IsFar(particle)) continue;
+            if(IsFar(particle)) continue; // اذا الجزيئة بعيدة لا تكمل
             Vector3 particlePos = particle.Matrix.GetPosition();
+
             List<Particle> inVoxel = bvh[GetVoxelCoordinate(particlePos)]; // in the same voxel
-            List<Particle> nearby = GetNearbyParticles(GetVoxelCoordinate(particlePos));
-            List<Particle> newPositions = new();
+            List<Particle> nearby = GetNearbyParticles(GetVoxelCoordinate(particlePos));// في المكعبات المحيطة
+            List<Particle> newPositions = new(); // لتخزين مواقع الجزيئات الجديدة بعد الصدم
             foreach (Particle other in inVoxel.Union(nearby)){
                 if (other != particle && IsParticlesColliding(particle, other)){
+                    // اضافة الاحداثيات الجديدة للنقاط
                     (Particle, Particle) collided = CollideParticles(particle, other);
                     newPositions.Add(collided.Item1);
                     newPositions.Add(collided.Item2);
@@ -258,6 +269,7 @@ public class SimManager : MonoBehaviour
             for(int i=0; i<newPositions.Count; i++){
                 AddParticleToHash(newPositions[i]);
             }
+            // كشف الصم مع المثلثات التي في نفس المكعب
             if(!bvh2.ContainsKey(GetVoxelCoordinate(particlePos))) continue;
             foreach(Triangle triangle in bvh2[GetVoxelCoordinate(particlePos)]){
                 CheckCollisionWithTriangle(particle, triangle);
@@ -348,6 +360,8 @@ public class SimManager : MonoBehaviour
         
         // Normalize the distance vector to get the direction of separation
         Vector3 direction = distanceVector.normalized;
+        particles.Remove(p1);
+        particles.Remove(p2);
         
         // Push each particle away by half the overlap
         p1.Matrix = Matrix4x4.TRS(
@@ -380,26 +394,26 @@ public class SimManager : MonoBehaviour
     }
 
     
-    public void GetVerticesFromMesh1(string modelPath){
-        List<Vector3> localVertices = new();
-        foreach (string line in File.ReadLines(modelPath))
-        {
-            if (line.StartsWith("v "))
-            {
-                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length == 4)
-                {
-                    float x = float.Parse(parts[1], CultureInfo.InvariantCulture);
-                    float y = float.Parse(parts[2], CultureInfo.InvariantCulture);
-                    float z = float.Parse(parts[3], CultureInfo.InvariantCulture);
+    // public void GetVerticesFromMesh1(string modelPath){
+    //     List<Vector3> localVertices = new();
+    //     foreach (string line in File.ReadLines(modelPath))
+    //     {
+    //         if (line.StartsWith("v "))
+    //         {
+    //             string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    //             if (parts.Length == 4)
+    //             {
+    //                 float x = float.Parse(parts[1], CultureInfo.InvariantCulture);
+    //                 float y = float.Parse(parts[2], CultureInfo.InvariantCulture);
+    //                 float z = float.Parse(parts[3], CultureInfo.InvariantCulture);
 
-                    localVertices.Add(new Vector3(x, y, z));
-                }
-            }
-        }
-        worldVertices = ConvertToWorldCoordinates(localVertices);
-        worldVertices = localVertices;
-    }
+    //                 localVertices.Add(new Vector3(x, y, z));
+    //             }
+    //         }
+    //     }
+    //     worldVertices = ConvertToWorldCoordinates(localVertices);
+    //     worldVertices = localVertices;
+    // }
 
     private void GetVerticesFromMesh2()
     {
