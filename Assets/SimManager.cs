@@ -54,17 +54,17 @@ public class SimManager : MonoBehaviour
     void Update()
     {
         if(particles.Count < limit) {
-            if(spawnedParticles % 40 == 0){
-                SpawnNewParticle(new(-20f, 3.5f, 2.0f)); 
-                SpawnNewParticle(new(-20f, 3.5f, -2.0f)); 
+            if(spawnedParticles % 50 == 0){
+                SpawnNewParticle(new(-20f, 4.5f, 1.5f)); 
+                //SpawnNewParticle(new(-20f, 4.5f, -2.0f)); 
             } 
             spawnedParticles++;
         }
-        RenderParticles();
         UpdateParticlesPosition();
         UpdateBVH();
         CheckCollisions();
-        //if(particles.Count > limit) particles.RemoveAt(0);
+        
+        RenderParticles();
         //VisualizeVertices("w");
     }
 
@@ -105,7 +105,7 @@ public class SimManager : MonoBehaviour
 
     bool IsFar(Particle p){
         Vector3 CarCentre = carBody.transform.position;
-        return MathF.Abs((p.matrix.GetPosition() - CarCentre).magnitude) > 30;
+        return MathF.Abs((p.matrix.GetPosition() - CarCentre).magnitude) > 20;
     }
 
     void AddParticleToHash2(Triangle triangle, Vector3 point){
@@ -183,8 +183,8 @@ public class SimManager : MonoBehaviour
                 Quaternion.identity,
                 particleSize
             );
-            // particles[i].velocity.y = MathF.Max(0.0f, particles[i].velocity.y - 1.2f);
-            // particles[i].velocity.z = MathF.Max(0.0f, particles[i].velocity.z - 1.2f);
+            particles[i].velocity.y = MathF.Max(0.0f, particles[i].velocity.y - 0.2f);
+            particles[i].velocity.z = MathF.Max(0.0f, particles[i].velocity.z - 0.2f);
         }
     }
 
@@ -260,7 +260,6 @@ public class SimManager : MonoBehaviour
             }
             if(!bvh2.ContainsKey(GetVoxelCoordinate(particlePos))) continue;
             foreach(Triangle triangle in bvh2[GetVoxelCoordinate(particlePos)]){
-                Debug.Log("chk");
                 CheckCollisionWithTriangle(particle, triangle);
             }
         }
@@ -290,7 +289,7 @@ public class SimManager : MonoBehaviour
         Debug.Log($"n3:{n3}"); // TODO removing this causes errors
 
         //bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
-        bool isCollided = AreClose(n1,n2,n3,0.2f);
+        bool isCollided = AreClose(n1,n2,n3,0.5f);
         if (isCollided)
         {
             CollideWithBody(normal, particle);
@@ -324,14 +323,14 @@ public class SimManager : MonoBehaviour
         // TODO dont process all particles, just those near the car
         // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
 
-        // Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
-        // Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
-        // particle.Matrix = Matrix4x4.TRS(
-        //         newPosition,
-        //         Quaternion.identity,
-        //         particleSize
-        // );
-        //collisionNormal = 0.2f * collisionNormal;
+        Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
+        Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
+        particle.Matrix = Matrix4x4.TRS(
+                newPosition,
+                Quaternion.identity,
+                particleSize
+        );
+        collisionNormal = 0.2f * collisionNormal;
         //if(collisionNormal.y == 0) collisionNormal.y += 0.02f;
         particle.Velocity = (collisionNormal.y < 0 ? Quaternion.Euler(0, 0, 90) : Quaternion.Euler(0, 0, -90)) * collisionNormal;
         //particle.Velocity = new(0,1,0);
@@ -352,13 +351,13 @@ public class SimManager : MonoBehaviour
         
         // Push each particle away by half the overlap
         p1.Matrix = Matrix4x4.TRS(
-            position1 + (overlap / 2 * direction),
+            position1 + (2*overlap / 2 * direction),
             Quaternion.identity,
             particleSize
         );
 
         p2.Matrix = Matrix4x4.TRS(
-            position1 - (overlap / 2 * direction),
+            position1 - (2*overlap / 2 * direction),
             Quaternion.identity,
             particleSize
         );
