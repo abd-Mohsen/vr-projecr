@@ -39,7 +39,7 @@ public class SimManager : MonoBehaviour
         triangles = triangulation.Delaunay();// تثليث
         Debug.Log($"finished triangulation {triangles.Count}");
         InitBVH2(); // تخزين المثلثات في هاش
-        Debug.Log($"initialized bvh2{bvh2.Count}");
+        Debug.Log($"initialized bvh2 {bvh2.Count}");
         //TODO get min x,y,z and max x,y,z of the body from the world vertices
         //Application.targetFrameRate = 60;
     }
@@ -197,7 +197,7 @@ public class SimManager : MonoBehaviour
     // ضخ جزيئة جديدة
     void SpawnNewParticle(Vector3 spawnPos){
         Matrix4x4 matrix = Matrix4x4.TRS(pos:spawnPos, Quaternion.Euler(0,0,0), particleSize);
-        particles.Add(new(matrix, new(0.2f,0f,0f)));
+        particles.Add(new(matrix, new(0.2f,-0.5f,0f)));
     }
 
     void VisualizeVertices(string type){
@@ -301,7 +301,7 @@ public class SimManager : MonoBehaviour
         Debug.Log($"n3:{n3}"); // TODO removing this causes errors
 
         //bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
-        bool isCollided = AreClose(n1,n2,n3,0.5f);
+        bool isCollided = AreClose(n1,n2,n3,0.3f);
         if (isCollided)
         {
             CollideWithBody(normal, particle);

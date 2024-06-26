@@ -942,7 +942,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mesh: {fileID: -2432090755550338912, guid: 17d2a3d780509ee44a43a01f85b52b61, type: 3}
   material: {fileID: 2100000, guid: 7a59b447b2e9e9b459382e3e30933ce9, type: 2}
-  limit: 50
+  limit: 100
   voxelSize: 1
   carBody: {fileID: 2083865406}
   particleRadius: 0.02
@@ -1204,15 +1204,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 636607e2b08a73c438921e467b59e330, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.005
+      value: 0.0045
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 636607e2b08a73c438921e467b59e330, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.005
+      value: 0.0045
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 636607e2b08a73c438921e467b59e330, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.005
+      value: 0.0045
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 636607e2b08a73c438921e467b59e330, type: 3}
       propertyPath: m_LocalPosition.x
