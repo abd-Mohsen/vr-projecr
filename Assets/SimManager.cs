@@ -8,6 +8,8 @@ using System.Globalization;
 using System.IO;
 using Unity.Jobs;
 using System.Xml.Schema;
+using UnityEngine.UI;
+using System.Data;
 
 public class SimManager : MonoBehaviour
 {
@@ -24,12 +26,17 @@ public class SimManager : MonoBehaviour
     Vector3 particleSize;
     int spawnedParticles = 0;
 
+
+
     List<Particle> particles = new();
     List<Triangle> triangles = new();
     Dictionary<Vector3Int, List<Particle>> bvh = new();
     Dictionary<Vector3Int, List<Triangle>> bvh2 = new();
     List<Vector3> worldVertices = new();
+    
+    
     public int xx=0;
+   
 
     // private readonly uint[] _args = { 0, 0, 0, 0, 0 };
     // private ComputeBuffer _argsBuffer;
@@ -45,31 +52,28 @@ public class SimManager : MonoBehaviour
     }
     public void showgameobject(){
         if(xx==0){
-            game[xx].SetActive(true);
-            game[1].SetActive(false);
-              game[2].SetActive(false);
-                game[3].SetActive(false);
+              game[6].SetActive(false);
+            game[0].SetActive(true);
+           
         }
-         if(xx==1){
-            game[xx].SetActive(true);
-            game[0].SetActive(false);
-              game[2].SetActive(false);
-                game[3].SetActive(false);
+        if(xx != 0){
+ game[xx].SetActive(true);
+            game[xx-1].SetActive(false);
+            
+
         }
-         if(xx==2){
-            game[xx].SetActive(true);
-            game[1].SetActive(false);
-              game[0].SetActive(false);
-                game[3].SetActive(false);
-        }
-         if(xx==3){
-            game[xx].SetActive(true);
-            game[1].SetActive(false);
-              game[2].SetActive(false);
-                game[0].SetActive(false);
-        }
+       
+           
+       
+       
     }
-    
+
+//change particleradius from slider
+public void nextradius(){
+    particleRadius+=0.1f;
+}
+
+
      // يتم استدعاء قبل البدء بالمحاكاة
     void Awake(){
         GetVerticesFromMesh2(); // تخزين النقاط
@@ -85,6 +89,9 @@ public class SimManager : MonoBehaviour
 
     void Start()
     {
+
+       
+      
         particleSize = new(2*particleRadius, 2*particleRadius, 2*particleRadius);
         particleRadius = particleSize.x/2;
         // _argsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
@@ -93,6 +100,7 @@ public class SimManager : MonoBehaviour
 
     void Update()
     {
+       
         if(particles.Count < limit) {
             if(spawnedParticles % 50 == 0){
                 SpawnNewParticle(new(-20f, 4.5f, 1.5f)); 
