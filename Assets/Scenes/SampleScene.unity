@@ -1030,7 +1030,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &933132117
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1401,7 +1401,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 24c2e5ce3414ceb488e0562b305ed3ea, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1480,6 +1480,7 @@ MonoBehaviour:
   particleRadius: 0
   modelPath: C:/Users/ABD/Desktop/low.obj
   xx: 0
+  startrunning: 0
 --- !u!1 &1654114001
 GameObject:
   m_ObjectHideFlags: 0
@@ -1789,7 +1790,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 2952790450bac7145954ad9ec11cc375, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2616740112450518765, guid: 2952790450bac7145954ad9ec11cc375, type: 3}
       propertyPath: m_IsActive
