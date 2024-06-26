@@ -21,6 +21,7 @@ public class SimManager : MonoBehaviour
     public GameObject[] game;
     [SerializeField] float particleRadius;
     [SerializeField] string modelPath;
+    
 
     const int batchSize = 1023;
     Vector3 particleSize;
@@ -36,6 +37,7 @@ public class SimManager : MonoBehaviour
     
     
     public int xx=0;
+    public bool startrunning=false;
    
 
     // private readonly uint[] _args = { 0, 0, 0, 0, 0 };
@@ -68,6 +70,10 @@ public class SimManager : MonoBehaviour
        
     }
 
+public void starttunnigg(){
+    startrunning=true;
+}
+
 //change particleradius from slider
 public void nextradius(){
     particleRadius+=0.1f;
@@ -76,6 +82,7 @@ public void nextradius(){
 
      // يتم استدعاء قبل البدء بالمحاكاة
     void Awake(){
+        if(startrunning==true){
         GetVerticesFromMesh2(); // تخزين النقاط
         Debug.Log($"extracted points {worldVertices.Count}");
         Triangulation triangulation = new(worldVertices); // تثليث
@@ -85,21 +92,27 @@ public void nextradius(){
         Debug.Log($"initialized bvh2 {bvh2.Count}");
         //TODO get min x,y,z and max x,y,z of the body from the world vertices
         //Application.targetFrameRate = 60;
-    }
+    }}
 
     void Start()
     {
 
-       
+       if(startrunning==true){
       
         particleSize = new(2*particleRadius, 2*particleRadius, 2*particleRadius);
         particleRadius = particleSize.x/2;
         // _argsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         // UpdateBuffers();
-    }
+    }}
 
     void Update()
     {
+        if(startrunning==true){
+            Awake();
+            Start();
+            startrunning=false;
+            
+        }
        
         if(particles.Count < limit) {
             if(spawnedParticles % 50 == 0){
