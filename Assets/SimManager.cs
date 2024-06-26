@@ -7,6 +7,7 @@ using UnityEditor;
 using System.Globalization;
 using System.IO;
 using Unity.Jobs;
+using System.Xml.Schema;
 
 public class SimManager : MonoBehaviour
 {
@@ -14,7 +15,8 @@ public class SimManager : MonoBehaviour
     [SerializeField] Material material;
     [SerializeField] int limit;
     [SerializeField] float voxelSize = 1f;
-    [SerializeField] GameObject carBody;
+    [SerializeField] GameObject [] carBody;
+    public GameObject[] game;
     [SerializeField] float particleRadius;
     [SerializeField] string modelPath;
 
@@ -27,11 +29,48 @@ public class SimManager : MonoBehaviour
     Dictionary<Vector3Int, List<Particle>> bvh = new();
     Dictionary<Vector3Int, List<Triangle>> bvh2 = new();
     List<Vector3> worldVertices = new();
+    public int xx=0;
 
     // private readonly uint[] _args = { 0, 0, 0, 0, 0 };
     // private ComputeBuffer _argsBuffer;
     
-    // يتم استدعاء قبل البدء بالمحاكاة
+   //the next and showgameobject is to change model when the buttom is pressed
+    public void nextt(){
+        if(xx<carBody.Length){
+            xx++;
+        }
+        if (xx==carBody.Length){
+            xx=0;
+        }
+    }
+    public void showgameobject(){
+        if(xx==0){
+            game[xx].SetActive(true);
+            game[1].SetActive(false);
+              game[2].SetActive(false);
+                game[3].SetActive(false);
+        }
+         if(xx==1){
+            game[xx].SetActive(true);
+            game[0].SetActive(false);
+              game[2].SetActive(false);
+                game[3].SetActive(false);
+        }
+         if(xx==2){
+            game[xx].SetActive(true);
+            game[1].SetActive(false);
+              game[0].SetActive(false);
+                game[3].SetActive(false);
+        }
+         if(xx==3){
+            game[xx].SetActive(true);
+            game[1].SetActive(false);
+              game[2].SetActive(false);
+                game[0].SetActive(false);
+        }
+    }
+    
+     // يتم استدعاء قبل البدء بالمحاكاة
     void Awake(){
         GetVerticesFromMesh2(); // تخزين النقاط
         Debug.Log($"extracted points {worldVertices.Count}");
@@ -108,7 +147,7 @@ public class SimManager : MonoBehaviour
 
     // عدم معالجة الجزيئات البعيدة عن الجسم
     bool IsFar(Particle p){
-        Vector3 CarCentre = carBody.transform.position;
+        Vector3 CarCentre = carBody[xx].transform.position;
         return MathF.Abs((p.matrix.GetPosition() - CarCentre).magnitude) > 20;
     }
 
@@ -125,7 +164,7 @@ public class SimManager : MonoBehaviour
         List<Vector3> worldVertices = new();
         foreach (Vector3 vertex in localVertices)
         {
-            Vector3 worldVertex = carBody.transform.TransformPoint(vertex);
+            Vector3 worldVertex = carBody[xx].transform.TransformPoint(vertex);
             worldVertices.Add(worldVertex);
         }
         return worldVertices;
@@ -418,7 +457,7 @@ public class SimManager : MonoBehaviour
     private void GetVerticesFromMesh2()
     {
         //List<Vector3> localVertices = new();
-        MeshFilter[] meshFilters = carBody.GetComponentsInChildren<MeshFilter>();
+        MeshFilter[] meshFilters = carBody[xx].GetComponentsInChildren<MeshFilter>();
         //MeshFilter ogFilter = carBody.GetComponent<MeshFilter>;
         List<Vector3> res = new();
             foreach (MeshFilter meshFilter in meshFilters)
