@@ -236,7 +236,7 @@ public class SimManager : MonoBehaviour
     // ضخ جزيئة جديدة
     void SpawnNewParticle(Vector3 spawnPos){
         Matrix4x4 matrix = Matrix4x4.TRS(pos:spawnPos, Quaternion.Euler(0,0,0), particleSize);
-        particles.Add(new(matrix, new(0.2f,-0.5f,0f)));
+        particles.Add(new(matrix, new(0.2f,0.0f,0f)));
     }
 
     void VisualizeVertices(string type){
@@ -340,7 +340,7 @@ public class SimManager : MonoBehaviour
         Debug.Log($"n3:{n3}"); // TODO removing this causes errors
 
         //bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
-        bool isCollided = AreClose(n1,n2,n3,0.3f);
+        bool isCollided = AreClose(n1,n2,n3,0.4f);
         if (isCollided)
         {
             CollideWithBody(normal, particle);
@@ -374,7 +374,7 @@ public class SimManager : MonoBehaviour
         // TODO dont process all particles, just those near the car
         // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
 
-        Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
+        Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.2f);
         Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
         particle.Matrix = Matrix4x4.TRS(
                 newPosition,
