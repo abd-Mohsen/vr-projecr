@@ -8,6 +8,8 @@ using System.Globalization;
 using System.IO;
 using Unity.Jobs;
 using System.Xml.Schema;
+using UnityEngine.UI;
+using System.Data;
 
 public class SimManager : MonoBehaviour
 {
@@ -19,17 +21,24 @@ public class SimManager : MonoBehaviour
     public GameObject[] game;
     [SerializeField] float particleRadius;
     [SerializeField] string modelPath;
+    
 
     const int batchSize = 1023;
     Vector3 particleSize;
     int spawnedParticles = 0;
+
+
 
     List<Particle> particles = new();
     List<Triangle> triangles = new();
     Dictionary<Vector3Int, List<Particle>> bvh = new();
     Dictionary<Vector3Int, List<Triangle>> bvh2 = new();
     List<Vector3> worldVertices = new();
+    
+    
     public int xx=0;
+    public bool startrunning=false;
+   
 
     // private readonly uint[] _args = { 0, 0, 0, 0, 0 };
     // private ComputeBuffer _argsBuffer;
@@ -45,33 +54,35 @@ public class SimManager : MonoBehaviour
     }
     public void showgameobject(){
         if(xx==0){
-            game[xx].SetActive(true);
-            game[1].SetActive(false);
-              game[2].SetActive(false);
-                game[3].SetActive(false);
+              game[6].SetActive(false);
+            game[0].SetActive(true);
+           
         }
-         if(xx==1){
-            game[xx].SetActive(true);
-            game[0].SetActive(false);
-              game[2].SetActive(false);
-                game[3].SetActive(false);
+        if(xx != 0){
+ game[xx].SetActive(true);
+            game[xx-1].SetActive(false);
+            
+
         }
-         if(xx==2){
-            game[xx].SetActive(true);
-            game[1].SetActive(false);
-              game[0].SetActive(false);
-                game[3].SetActive(false);
-        }
-         if(xx==3){
-            game[xx].SetActive(true);
-            game[1].SetActive(false);
-              game[2].SetActive(false);
-                game[0].SetActive(false);
-        }
+       
+           
+       
+       
     }
-    
+
+public void starttunnigg(){
+    startrunning=true;
+}
+
+//change particleradius from slider
+public void nextradius(){
+    particleRadius+=0.1f;
+}
+
+
      // يتم استدعاء قبل البدء بالمحاكاة
     void Awake(){
+        if(startrunning==true){
         GetVerticesFromMesh2(); // تخزين النقاط
         Debug.Log($"extracted points {worldVertices.Count}");
         Triangulation triangulation = new(worldVertices); // تثليث
@@ -81,18 +92,28 @@ public class SimManager : MonoBehaviour
         Debug.Log($"initialized bvh2 {bvh2.Count}");
         //TODO get min x,y,z and max x,y,z of the body from the world vertices
         //Application.targetFrameRate = 60;
-    }
+    }}
 
     void Start()
     {
+
+       if(startrunning==true){
+      
         particleSize = new(2*particleRadius, 2*particleRadius, 2*particleRadius);
         particleRadius = particleSize.x/2;
         // _argsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
         // UpdateBuffers();
-    }
+    }}
 
     void Update()
     {
+        if(startrunning==true){
+            Awake();
+            Start();
+            startrunning=false;
+            
+        }
+       
         if(particles.Count < limit) {
             if(spawnedParticles % 50 == 0){
                 SpawnNewParticle(new(-20f, 4.5f, 1.5f)); 
