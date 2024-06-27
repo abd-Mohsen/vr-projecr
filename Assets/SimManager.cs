@@ -20,7 +20,7 @@ public class SimManager : MonoBehaviour
     [SerializeField] GameObject [] carBody;
     public GameObject[] game;
     [SerializeField] float particleRadius;
-    [SerializeField] string modelPath;
+    //[SerializeField] string modelPath;
     
 
     const int batchSize = 1023;
@@ -36,8 +36,8 @@ public class SimManager : MonoBehaviour
     List<Vector3> worldVertices = new();
     
     
-    public int xx=0;
-    public bool startrunning=false;
+    private int xx=0;
+    private bool startrunning=false;
    
 
     // private readonly uint[] _args = { 0, 0, 0, 0, 0 };
@@ -54,7 +54,7 @@ public class SimManager : MonoBehaviour
     }
     public void showgameobject(){
         if(xx==0){
-              game[6].SetActive(false);
+              game[5].SetActive(false);
             game[0].SetActive(true);
            
         }
