@@ -1,6 +1,7 @@
 using UnityEngine;
+using System;
 
-class Particle {
+public struct Particle {
     public Matrix4x4 matrix;
     public Vector3 velocity;
 
@@ -19,5 +20,9 @@ class Particle {
     {
         get { return velocity; }
         set { velocity = value; }
+    }
+
+    public bool IsFar(Vector3 CarCentre){
+        return MathF.Abs((matrix.GetPosition() - CarCentre).magnitude) > 20;
     }
 }

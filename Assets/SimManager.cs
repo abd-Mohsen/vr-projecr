@@ -7,6 +7,7 @@ using UnityEditor;
 using System.Globalization;
 using System.IO;
 using Unity.Jobs;
+using Unity.Collections;
 using System.Xml.Schema;
 using UnityEngine.UI;
 using System.Data;
@@ -26,13 +27,10 @@ public class SimManager : MonoBehaviour
     const int batchSize = 1023;
     Vector3 particleSize;
     int spawnedParticles = 0;
-
-
-
-    List<Particle> particles = new();
+    NativeArray<Particle> particles = new();
     List<Triangle> triangles = new();
-    Dictionary<Vector3Int, List<Particle>> bvh = new();
-    Dictionary<Vector3Int, List<Triangle>> bvh2 = new();
+    public Dictionary<Vector3Int, List<Particle>> bvh = new();
+    public Dictionary<Vector3Int, List<Triangle>> bvh2 = new();
     List<Vector3> worldVertices = new();
     
     
@@ -107,25 +105,44 @@ public void nextradius(){
 
     void Update()
     {
-        if(startrunning==true){
-            Awake();
-            Start();
-            startrunning=false;
+        // if(startrunning==true){
+        //     Awake();
+        //     Start();
+        //     startrunning=false;
             
-        }
+        // }
        
-        if(particles.Count < limit) {
+        if(particles.Count() < limit) {
             if(spawnedParticles % 50 == 0){
                 SpawnNewParticle(new(-20f, 4.5f, 1.5f)); 
                 //SpawnNewParticle(new(-20f, 4.5f, -2.0f)); 
             } 
             spawnedParticles++;
         }
-        UpdateParticlesPosition();
+        //UpdateParticlesPosition();
+        UpdateParticlesJob updateJob = new()
+        {
+            particles = particles,
+            particleSize1 = particleSize,  
+        };
+
+        JobHandle handle1 = updateJob.Schedule(particles.Count(), 64);
+        handle1.Complete();
+
         UpdateBVH();
         CheckCollisions();
         
-        RenderParticles();
+        //RenderParticles();
+        
+        RenderParticlesJob renderJob = new()
+        {
+            particles = particles,
+            mesh1 = mesh, 
+            material1 = material,   
+        };
+
+        JobHandle handle2 = renderJob.Schedule(particles.Count(), 64);
+        handle2.Complete();
         //VisualizeVertices("w");
     }
     
@@ -136,14 +153,14 @@ public void nextradius(){
         // TODO: mapping particle to its matrix might be cpu intensive (for loop might be faster)
         List<Matrix4x4> matrixArray = new();
 
-        for (int i = 0; i < particles.Count; i++){
+        for (int i = 0; i < particles.Count(); i++){
             //matrixArray[i] = particles[i].matrix;
             matrixArray.Add(particles[i].matrix);
         }
 
-        for (int i = 0; i < particles.Count; i += batchSize)
+        for (int i = 0; i < particles.Count(); i += batchSize)
         {
-            int count = Math.Min(batchSize, particles.Count - i);
+            int count = Math.Min(batchSize, particles.Count() - i);
             Graphics.DrawMeshInstanced(
                 mesh,
                 0,
@@ -241,50 +258,52 @@ public void nextradius(){
     // تحريك الجزيئات
     void UpdateParticlesPosition(){
         //TODO edit velocity when neccessary (eg: y and z)
-        for (int i = 0; i < particles.Count; i++){
+        for (int i = 0; i < particles.Count(); i++){
+            Particle particle = particles[i];
             Vector3 oldPos = particles[i].Matrix.GetPosition();
-            particles[i].Matrix = Matrix4x4.TRS(
+            particle.Matrix = Matrix4x4.TRS(
                 oldPos + 10 * Time.deltaTime * particles[i].Velocity,
                 Quaternion.identity,
                 particleSize
             );
             // مشان الجزيئات تضل لازقة بالجسم
-            particles[i].velocity.y = MathF.Max(0.0f, particles[i].velocity.y - 0.2f);
-            particles[i].velocity.z = MathF.Max(0.0f, particles[i].velocity.z - 0.2f);
+            particle.velocity.y = MathF.Max(0.0f, particles[i].velocity.y - 0.2f);
+            particle.velocity.z = MathF.Max(0.0f, particles[i].velocity.z - 0.2f);
+            particles[i] = particle;
         }
     }
 
     // ضخ جزيئة جديدة
     void SpawnNewParticle(Vector3 spawnPos){
         Matrix4x4 matrix = Matrix4x4.TRS(pos:spawnPos, Quaternion.Euler(0,0,0), particleSize);
-        particles.Add(new(matrix, new(0.2f,-0.5f,0f)));
+        particles.Append(new(matrix, new(0.2f,0.0f,0f)));
     }
 
-    void VisualizeVertices(string type){
-        particles.Clear();
-        if(type == "world"){
-            foreach(Vector3 vertex in worldVertices){
-                Matrix4x4 matrix = Matrix4x4.TRS(pos:vertex, Quaternion.Euler(0,0,0), particleSize);
-                particles.Add(new(matrix, new(0f,0f,0f)));
-            }
-        }
-        else{
-            for(int i=0; i<triangles.Count; i+=1){
-                Vector3 a = triangles[i].A;
-                Vector3 b = triangles[i].B;
-                Vector3 c = triangles[i].C;
-                // Vector3 b = worldVertices[i];
-                // Vector3 c = worldVertices[i];
-                // Debug.Log(vertex);
-                Matrix4x4 matrix = Matrix4x4.TRS(pos:a, Quaternion.Euler(0,0,0), particleSize);
-                particles.Add(new(matrix, new(0.5f,0f,0f)));
-                Matrix4x4 matrix1 = Matrix4x4.TRS(pos:b, Quaternion.Euler(0,0,0), particleSize);
-                particles.Add(new(matrix1, new(0.5f,0f,0f)));
-                Matrix4x4 matrix2 = Matrix4x4.TRS(pos:c, Quaternion.Euler(0,0,0), particleSize);
-                particles.Add(new(matrix2, new(0.5f,0f,0f)));
-            }
-        }
-    }
+    // void VisualizeVertices(string type){
+    //     particles.Clear();
+    //     if(type == "world"){
+    //         foreach(Vector3 vertex in worldVertices){
+    //             Matrix4x4 matrix = Matrix4x4.TRS(pos:vertex, Quaternion.Euler(0,0,0), particleSize);
+    //             particles.Add(new(matrix, new(0f,0f,0f)));
+    //         }
+    //     }
+    //     else{
+    //         for(int i=0; i<triangles.Count; i+=1){
+    //             Vector3 a = triangles[i].A;
+    //             Vector3 b = triangles[i].B;
+    //             Vector3 c = triangles[i].C;
+    //             // Vector3 b = worldVertices[i];
+    //             // Vector3 c = worldVertices[i];
+    //             // Debug.Log(vertex);
+    //             Matrix4x4 matrix = Matrix4x4.TRS(pos:a, Quaternion.Euler(0,0,0), particleSize);
+    //             particles.Add(new(matrix, new(0.5f,0f,0f)));
+    //             Matrix4x4 matrix1 = Matrix4x4.TRS(pos:b, Quaternion.Euler(0,0,0), particleSize);
+    //             particles.Add(new(matrix1, new(0.5f,0f,0f)));
+    //             Matrix4x4 matrix2 = Matrix4x4.TRS(pos:c, Quaternion.Euler(0,0,0), particleSize);
+    //             particles.Add(new(matrix2, new(0.5f,0f,0f)));
+    //         }
+    //     }
+    // }
 
     // تحديث الهاش 
     public void UpdateBVH(){
@@ -319,7 +338,7 @@ public void nextradius(){
             List<Particle> nearby = GetNearbyParticles(GetVoxelCoordinate(particlePos));// في المكعبات المحيطة
             List<Particle> newPositions = new(); // لتخزين مواقع الجزيئات الجديدة بعد الصدم
             foreach (Particle other in inVoxel.Union(nearby)){
-                if (other != particle && IsParticlesColliding(particle, other)){
+                if (other.matrix.GetPosition() != particle.matrix.GetPosition() && IsParticlesColliding(particle, other)){
                     // اضافة الاحداثيات الجديدة للنقاط
                     (Particle, Particle) collided = CollideParticles(particle, other);
                     newPositions.Add(collided.Item1);
@@ -361,7 +380,7 @@ public void nextradius(){
         Debug.Log($"n3:{n3}"); // TODO removing this causes errors
 
         //bool isCollided = Vector3.Dot(n3,n2) >= 1 && Vector3.Dot(n3,n1) >= 1;
-        bool isCollided = AreClose(n1,n2,n3,0.3f);
+        bool isCollided = AreClose(n1,n2,n3,0.4f);
         if (isCollided)
         {
             CollideWithBody(normal, particle);
@@ -395,7 +414,7 @@ public void nextradius(){
         // TODO dont process all particles, just those near the car
         // TODO if we want the particles to slide alongside a hollow car body, decrement y,z until it hit a triangle, do that while the x is less than car's end
 
-        Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.1f);
+        Vector3 pushBack = particle.velocity.normalized * (particleRadius + 0.2f);
         Vector3 newPosition = particle.matrix.GetPosition() - pushBack;
         particle.Matrix = Matrix4x4.TRS(
                 newPosition,
@@ -420,8 +439,8 @@ public void nextradius(){
         
         // Normalize the distance vector to get the direction of separation
         Vector3 direction = distanceVector.normalized;
-        particles.Remove(p1);
-        particles.Remove(p2);
+        // particles.Remove(p1);
+        // particles.Remove(p2);
         
         // Push each particle away by half the overlap
         p1.Matrix = Matrix4x4.TRS(
