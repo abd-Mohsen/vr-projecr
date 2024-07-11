@@ -34,53 +34,39 @@ public class SimManager : MonoBehaviour
     List<Vector3> worldVertices = new();
     
     
-    private int xx=0;
-    private bool startrunning=false;
+    private int modelIndex = 0;
+    private bool running=false;
    
 
     // private readonly uint[] _args = { 0, 0, 0, 0, 0 };
     // private ComputeBuffer _argsBuffer;
     
-   //the next and showgameobject is to change model when the buttom is pressed
-    public void nextt(){
-        if(xx<carBody.Length){
-            xx++;
+   //the next and showgameobject is to change model when the button is pressed
+    public void nextModel(){
+        if(modelIndex < carBody.Length){
+            modelIndex++;
         }
-        if (xx==carBody.Length){
-            xx=0;
+        if (modelIndex == carBody.Length){
+            modelIndex=0;
         }
     }
-    public void showgameobject(){
-        if(xx==0){
-              game[5].SetActive(false);
+    public void showModel(){
+        if(modelIndex==0){
+            game[5].SetActive(false);
             game[0].SetActive(true);
            
         }
-        if(xx != 0){
- game[xx].SetActive(true);
-            game[xx-1].SetActive(false);
-            
-
+        if(modelIndex != 0){
+            game[modelIndex].SetActive(true);
+            game[modelIndex-1].SetActive(false);
         }
-       
-           
-       
-       
     }
 
-public void starttunnigg(){
-    startrunning=true;
-}
+    public void startRunning(){
+        running=true;
+    }
 
-//change particleradius from slider
-public void nextradius(){
-    particleRadius+=0.1f;
-}
-
-
-     // يتم استدعاء قبل البدء بالمحاكاة
     void Awake(){
-        if(startrunning==true){
         GetVerticesFromMesh2(); // تخزين النقاط
         Debug.Log($"extracted points {worldVertices.Count}");
         Triangulation triangulation = new(worldVertices); // تثليث
@@ -90,12 +76,12 @@ public void nextradius(){
         Debug.Log($"initialized bvh2 {bvh2.Count}");
         //TODO get min x,y,z and max x,y,z of the body from the world vertices
         //Application.targetFrameRate = 60;
-    }}
+    }
 
     void Start()
     {
 
-       if(startrunning==true){
+       if(running==true){
       
         particleSize = new(2*particleRadius, 2*particleRadius, 2*particleRadius);
         particleRadius = particleSize.x/2;
@@ -105,13 +91,8 @@ public void nextradius(){
 
     void Update()
     {
-        // if(startrunning==true){
-        //     Awake();
-        //     Start();
-        //     startrunning=false;
-            
-        // }
-       
+        if(!running) return; 
+
         if(particles.Count() < limit) {
             if(spawnedParticles % 50 == 0){
                 SpawnNewParticle(new(-20f, 4.5f, 1.5f)); 
@@ -119,6 +100,7 @@ public void nextradius(){
             } 
             spawnedParticles++;
         }
+        
         //UpdateParticlesPosition();
         UpdateParticlesJob updateJob = new()
         {
@@ -150,7 +132,7 @@ public void nextradius(){
     public void RenderParticles(){
          // TODO: test if this below is working and optimised
         //Matrix4x4[] matrixArray = new Matrix4x4[particles.Count]; 
-        // TODO: mapping particle to its matrix might be cpu intensive (for loop might be faster)
+        
         List<Matrix4x4> matrixArray = new();
 
         for (int i = 0; i < particles.Count(); i++){
@@ -185,7 +167,7 @@ public void nextradius(){
 
     // عدم معالجة الجزيئات البعيدة عن الجسم
     bool IsFar(Particle p){
-        Vector3 CarCentre = carBody[xx].transform.position;
+        Vector3 CarCentre = carBody[modelIndex].transform.position;
         return MathF.Abs((p.matrix.GetPosition() - CarCentre).magnitude) > 20;
     }
 
@@ -202,7 +184,7 @@ public void nextradius(){
         List<Vector3> worldVertices = new();
         foreach (Vector3 vertex in localVertices)
         {
-            Vector3 worldVertex = carBody[xx].transform.TransformPoint(vertex);
+            Vector3 worldVertex = carBody[modelIndex].transform.TransformPoint(vertex);
             worldVertices.Add(worldVertex);
         }
         return worldVertices;
@@ -497,7 +479,7 @@ public void nextradius(){
     private void GetVerticesFromMesh2()
     {
         //List<Vector3> localVertices = new();
-        MeshFilter[] meshFilters = carBody[xx].GetComponentsInChildren<MeshFilter>();
+        MeshFilter[] meshFilters = carBody[modelIndex].GetComponentsInChildren<MeshFilter>();
         //MeshFilter ogFilter = carBody.GetComponent<MeshFilter>;
         List<Vector3> res = new();
             foreach (MeshFilter meshFilter in meshFilters)
